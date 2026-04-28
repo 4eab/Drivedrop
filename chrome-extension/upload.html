@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: sans-serif;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    #status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Drivedrop</h2>
+  <div id="authSection" style="display: none;">
+    <button id="loginBtn">Authorize your Google Account</button>
+  </div>
+
+  <div id="uploadSection" style="display: none;">
+    <div id="filePickerArea">
+      <input type="file" id="fileInput">
+      <button id="uploadBtn">Upload to Drive</button>
+    </div>
+
+    <div id="shareSection" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+      <p style="font-size: 14px; font-weight: bold;">Step 2: Share Settings</p>
+      <label for="shareMode" style="font-size: 12px; color: #666;">Mode:</label>
+      <select id="shareMode" style="width: 100%; padding: 5px;">
+        <option value="DISTRIBUTED">Distributed</option>
+        <option value="OPEN_CLAIM">Open</option>
+      </select>
+
+      <label for="shareLimit" style="font-size: 12px; color: #666;">Max Visitors:</label>
+      <input type="number" id="shareLimit" placeholder="Max users" min="1" step="1" value="1"
+        style="width: 93%; padding: 5px;">
+
+      <button id="confirmShareBtn" style="background-color: #4CAF50; color: white; border: none;">Confirm & Get
+        Link</button>
+    </div>
+
+    <button id="logoutBtn" style="margin-top: 20px; background: #eee; border: 1px solid #ccc;">Sign Out</button>
+  </div>
+
+  <div id="status"></div>
+</body>
+<script src="upload.js"></script>
+
+</html>

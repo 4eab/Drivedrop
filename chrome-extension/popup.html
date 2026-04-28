@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 300px;
+      padding: 15px;
+      font-family: sans-serif;
+    }
+
+    button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    #status {
+      font-size: 12px;
+      color: #666;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="authSection" style="display: none;">
+    <button id="loginBtn">Authorize your Google Account</button>
+  </div>
+
+  <div id="uploadSection" style="display: none;">
+    <button id="uploadBtn">Upload</button>
+    <button id="logoutBtn">Sign Out</button>
+  </div>
+
+  <div id="status"></div>
+</body>
+<script src="popup.js"></script>
+
+</html>

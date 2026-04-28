@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "DriveDrop",
+  "version": "1.0",
+  "permissions": [
+    "storage", 
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://localhost:8080/*",
+    "https://www.googleapis.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
+}
