@@ -7,6 +7,9 @@ target/
 # config
 src/main/resources/application.yaml
 
+# system files
+.DS_Store
+
 ### STS ###
 .apt_generated
 .classpath
