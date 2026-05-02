@@ -1,38 +1,36 @@
 package com.bae4.drivedrop.controller;
 
-import com.bae4.drivedrop.entity.User;
-import com.bae4.drivedrop.repository.UserRepository;
-import com.bae4.drivedrop.utils.JWTUtil;
+import com.bae4.drivedrop.service.GoogleAuthService;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeRequestUrl;
-import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeTokenRequest;
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
-import com.google.api.client.googleapis.auth.oauth2.GoogleTokenResponse;
-import com.google.api.client.http.HttpTransport;
-import com.google.api.client.http.javanet.NetHttpTransport;
-import com.google.api.client.json.JsonFactory;
-import com.google.api.client.json.gson.GsonFactory;
-import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.Arrays;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
+
+    private final GoogleAuthService googleAuthService;
 
     @Value("${app.extension.id}")
     private String extensionId;
 
-    @Value("${url.redirectUrl}")
+    @Value("${url.redirect-url}")
     private String redirectBaseUrl;
 
     @Value("${google.client-id}")
@@ -43,12 +41,6 @@ public class AuthController {
 
     @Value("${google.redirect-uri}")
     private String redirectUri;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
-    private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
 
     @GetMapping("/login")
     public void redirectToGoogle(HttpServletResponse response) throws IOException {
@@ -69,56 +61,31 @@ public class AuthController {
             @RequestParam(value = "code", required = false) String code,
             @RequestParam(value = "error", required = false) String error
     ) {
-        // TODO: ERROR(SUCH AS ACCESS DENY) HANDLING
+        if (error != null) {
+            return ResponseEntity.badRequest().body(error);
+        }
+        if (code == null || code.isEmpty()) {
+            String errorMsg = "Missing Auth Code";
+            return ResponseEntity.badRequest().body(errorMsg);
+        }
         try {
-            GoogleTokenResponse tokenResponse = new GoogleAuthorizationCodeTokenRequest(
-                    HTTP_TRANSPORT,
-                    JSON_FACTORY,
-                    clientId,
-                    clientSecret,
-                    code,
-                    redirectUri)
-                    .execute();
-
-            GoogleIdToken idToken = tokenResponse.parseIdToken();
-            GoogleIdToken.Payload payload = idToken.getPayload();
-
-            String sub = payload.getSubject();
-            String email = payload.getEmail();
-
-            User user = userRepository.findById(sub).orElseGet(() -> {
-                User newUser = new User();
-                newUser.setGoogleSub(sub); // TODO: A BETTER SOLUTION FOR Persist Problem?
-                return newUser;
-            });
-
-            user.setEmail(email);
-            if (tokenResponse.getRefreshToken() != null) {
-                user.setRefreshToken(tokenResponse.getRefreshToken());
-            }
-
-            user.setTotalShares(0);
-
-            userRepository.save(user);
-
-            String token = JWTUtil.generateToken(
-                    user.getEmail(),
-                    user.getGoogleSub()
-            );
-
-            String redirectUrl = redirectBaseUrl + token;
-
-            return ResponseEntity.status(302).header("Location", redirectUrl).build();
+            String token = googleAuthService.generateToken(code);
+            String redirectUrl = UriComponentsBuilder.fromUriString(redirectBaseUrl)
+                    .queryParam("token", token)
+                    .build().toUriString();
+            return ResponseEntity.status(HttpStatus.FOUND).location(URI.create(redirectUrl)).build();
 
         } catch (IOException e) {
-            return ResponseEntity.status(500).body(e.getMessage());
+            log.error("Network error during Google Auth for code: {}", code, e);
+            return ResponseEntity.internalServerError().body("Authentication service unavailable");
+        } catch (Exception e) {
+            log.error("Unexpected error during Google Auth", e);
+            return ResponseEntity.internalServerError().body("An unexpected error occurred");
         }
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> me(@RequestHeader("Authorization") String auth) {
-        String token = auth.replace("Bearer ", "");
-        Claims claims = JWTUtil.parseToken(token);
-        return ResponseEntity.ok(claims);
+    public ResponseEntity<?> me() {
+        return ResponseEntity.ok().build();
     }
 }

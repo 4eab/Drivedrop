@@ -4,33 +4,43 @@ import com.bae4.drivedrop.dto.AccessCodeDTO;
 import com.bae4.drivedrop.dto.TaskResponseDTO;
 import com.bae4.drivedrop.entity.AccessCode;
 import com.bae4.drivedrop.entity.ShareTask;
+import com.bae4.drivedrop.entity.User;
 import com.bae4.drivedrop.enums.ShareMode;
 import com.bae4.drivedrop.enums.TaskStatus;
 import com.bae4.drivedrop.repository.AccessCodeRepository;
 import com.bae4.drivedrop.repository.ShareTaskRepository;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class ShareTaskService {
+
+    private final ShareTaskRepository taskRepository;
+    private final AccessCodeRepository accessCodeRepository;
+
     @Value("${code.length}")
     private int codeLength;
 
-    @Value("${url.downloadUrl}")
+    @Value("${url.download-url}")
     private String url;
 
-    @Autowired
-    private ShareTaskRepository taskRepository;
-
-    @Autowired
-    private AccessCodeRepository accessCodeRepository;
+    @Transactional
+    public ShareTask initShareTask(User user, String fileName, String uploadUrl) {
+        ShareTask task = new ShareTask();
+        task.setOwner(user);
+        task.setFileName(fileName);
+        task.setUploadUrl(uploadUrl);
+        return taskRepository.save(task);
+    }
 
     @Transactional
     public ShareTask confirmShareTask(String taskId, String fileId, ShareMode mode, int count) {
@@ -52,6 +62,7 @@ public class ShareTaskService {
 
         task.setAccessCodes(codes);
         task.setTaskStatus(TaskStatus.ACTIVE);
+        task.setActivatedAt(LocalDateTime.now());
         return taskRepository.save(task);
     }
 
@@ -75,11 +86,9 @@ public class ShareTaskService {
         dto.setTotalCodes(task.getTargetDownloadCount());
 
         if (task.getShareMode() == ShareMode.OPEN_CLAIM) {
-            // 抢票模式：返回公共链接
             dto.setPublicUrl(url + task.getId());
             dto.setRemainingCodes((int) task.getAccessCodes().stream().filter(c -> !c.isUsed()).count());
         } else if (task.getShareMode() == ShareMode.DISTRIBUTED) {
-            // 定向分发：构建链接列表
             List<AccessCodeDTO> links = task.getAccessCodes().stream()
                     .map(code -> new AccessCodeDTO(
                             code.getCode(),

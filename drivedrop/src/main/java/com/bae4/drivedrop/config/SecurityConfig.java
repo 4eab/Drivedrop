@@ -23,6 +23,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/me").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/tasks/download/**").permitAll()
                         .requestMatchers("/api/tasks/init", "/api/tasks/confirm").authenticated()

@@ -4,13 +4,14 @@ import com.bae4.drivedrop.dto.TaskConfirmRequest;
 import com.bae4.drivedrop.dto.TaskResponseDTO;
 import com.bae4.drivedrop.entity.ShareTask;
 import com.bae4.drivedrop.entity.User;
-import com.bae4.drivedrop.repository.ShareTaskRepository;
-import com.bae4.drivedrop.repository.UserRepository;
 import com.bae4.drivedrop.service.DownloadService;
 import com.bae4.drivedrop.service.GoogleDriveService;
 import com.bae4.drivedrop.service.ShareTaskService;
+import com.bae4.drivedrop.service.UserService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,45 +23,43 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/tasks")
 @RequiredArgsConstructor
 public class TaskController {
 
-    private final UserRepository userRepository;
-    private final ShareTaskRepository taskRepository;
+    private final UserService userService;
     private final GoogleDriveService googleDriveService;
     private final ShareTaskService shareTaskService;
     private final DownloadService downloadService;
 
+    public record InitUploadResponse(String taskId, String uploadUrl) {}
+
     @PostMapping("/init")
     public ResponseEntity<?> initUpload(
-            @AuthenticationPrincipal String googleSub, // TODO: WOULD IT BE POSSIBLE TO REMOVE USER? AT LEAST MOVE THE CODE TO SERVICE
+            @AuthenticationPrincipal String googleSub,
             @RequestParam String fileName) {
-
-        User user = userRepository.findById(googleSub)
-                .orElseThrow(() -> new RuntimeException("Invalid User"));
-
         try {
+
+            User user = userService.findById(googleSub);
+
+            if (user.getRefreshToken() == null) {
+                log.warn("User {} tried to upload without refresh token", user.getEmail());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google Auth Expired");
+            }
+
             String uploadUrl = googleDriveService.createResumableUploadUrl(user.getRefreshToken(), fileName);
+            ShareTask task = shareTaskService.initShareTask(user, fileName, uploadUrl);
+            return ResponseEntity.ok(new InitUploadResponse(task.getId(), task.getUploadUrl()));
 
-            ShareTask task = new ShareTask();
-            task.setOwner(user);
-            task.setFileName(fileName);
-            task.setUploadUrl(uploadUrl);
-            taskRepository.save(task);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("taskId", task.getId());
-            result.put("uploadUrl", uploadUrl);
-
-            return ResponseEntity.ok(result);
-
+        } catch (IOException e) { // TODO: global error handling
+            log.error("Google UploadUrl Generation Error", e);
+            return ResponseEntity.internalServerError().body("Task Initialization Failed");
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Initialization Failed: " + e.getMessage());
+            log.error("Unexpected Error", e);
+            return ResponseEntity.internalServerError().body("Initialization Failed: " + e.getMessage());
         }
     }
 

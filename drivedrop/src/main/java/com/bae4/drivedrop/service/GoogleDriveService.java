@@ -1,16 +1,21 @@
 package com.bae4.drivedrop.service;
 
+import com.bae4.drivedrop.repository.UserRepository;
 import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.googleapis.auth.oauth2.GoogleRefreshTokenRequest;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.json.JsonFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.IOException;
@@ -18,13 +23,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@Slf4j
 @Service
-public class GoogleDriveService {
+@RequiredArgsConstructor
+public class GoogleDriveService { // TODO: use google sdk instead of restTemplate?
 
-    @Autowired
-    private JsonFactory jsonFactory;
-    @Autowired
-    private HttpTransport httpTransport;
+    private final JsonFactory jsonFactory;
+    private final HttpTransport httpTransport;
+    private final UserRepository userRepository;
 
     @Value("${google.client-id}")
     private String clientId;
@@ -64,5 +70,30 @@ public class GoogleDriveService {
                 .execute();
 
         return response.getAccessToken();
+    }
+
+    public void deleteFileFromDrive(String refreshToken, String fileId) throws IOException {
+        TokenResponse tokenResponse = new GoogleRefreshTokenRequest(
+                httpTransport, jsonFactory, refreshToken, clientId, clientSecret)
+                .execute();
+        String accessToken = tokenResponse.getAccessToken();
+
+        String url = "https://www.googleapis.com/drive/v3/files/" + fileId;
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                log.warn("File already gone from Drive.");
+            } else {
+                throw e;
+            }
+        }
     }
 }

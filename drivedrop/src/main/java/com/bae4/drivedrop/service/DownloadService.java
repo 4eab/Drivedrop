@@ -66,9 +66,8 @@ public class DownloadService {
         }
     }
 
-    // TODO
-    private void deleteFileFromDrive(ShareTask task) {
-        System.out.println(task.getFileName() + " DELETED");
+    private void deleteFileFromDrive(ShareTask task) throws IOException {
+        googleDriveService.deleteFileFromDrive(task.getOwner().getRefreshToken(), task.getGoogleFileId());
         task.setFileDeleted(true);
     }
 }

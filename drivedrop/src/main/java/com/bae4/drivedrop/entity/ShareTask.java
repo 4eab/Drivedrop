@@ -16,6 +16,7 @@ import jakarta.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Setter
@@ -40,6 +41,7 @@ public class ShareTask {
     private String uploadUrl;
     private String fileName;
 
+    private LocalDateTime activatedAt;
     private Integer targetDownloadCount;
     private boolean isFileDeleted = false;
 

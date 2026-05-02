@@ -44,10 +44,10 @@ public class JWTAuthFilter extends OncePerRequestFilter {
         if (token != null) {
             Claims claims = JWTUtil.parseToken(token);
             if (claims != null) {
-                String spotifyId = claims.getSubject();
+                String sub = claims.getSubject();
 
                 UsernamePasswordAuthenticationToken authentication =
-                        new UsernamePasswordAuthenticationToken(spotifyId, null, List.of());
+                        new UsernamePasswordAuthenticationToken(sub, null, List.of());
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

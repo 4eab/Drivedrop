@@ -47,7 +47,6 @@ class AccessCodeConcurrencyTest {
                     successCount.incrementAndGet();
                 } catch (Exception e) {
                     e.printStackTrace();
-                    // System.err.println("抢票失败: " + e.getMessage());
                     failCount.incrementAndGet();
                 }
             });

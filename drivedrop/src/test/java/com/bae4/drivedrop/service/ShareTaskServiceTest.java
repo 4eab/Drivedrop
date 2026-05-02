@@ -3,7 +3,6 @@ package com.bae4.drivedrop.service;
 import com.bae4.drivedrop.entity.ShareTask;
 import com.bae4.drivedrop.enums.ShareMode;
 import com.bae4.drivedrop.enums.TaskStatus;
-import com.bae4.drivedrop.repository.AccessCodeRepository;
 import com.bae4.drivedrop.repository.ShareTaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,9 +27,6 @@ class ShareTaskServiceTest {
 
     @Mock
     private ShareTaskRepository taskRepository;
-
-    @Mock
-    private AccessCodeRepository accessCodeRepository;
 
     @InjectMocks
     private ShareTaskService shareTaskService;
